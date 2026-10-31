@@ -48,27 +48,27 @@ jobs:
       - name: Configure SSH
         env:
           VPS_SSH_KEY_B64: ${{ secrets.VPS_SSH_KEY_B64 }}
-          VPS_KNOWN_HOSTS: ${{ vars.VPS_KNOWN_HOSTS }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
         run: |
           set -eu
           install -m 700 -d "$HOME/.ssh"
-          test -n "$VPS_SSH_KEY_B64" || { echo "ERROR: Missing Actions variable VPS_SSH_KEY_B64"; exit 1; }
+          test -n "$VPS_SSH_KEY_B64" || { echo "ERROR: Missing Actions secret VPS_SSH_KEY_B64"; exit 1; }
           printf '%s' "$VPS_SSH_KEY_B64" | base64 --decode > "$HOME/.ssh/id_ed25519"
           chmod 600 "$HOME/.ssh/id_ed25519"
           ssh-keygen -y -P '' -f "$HOME/.ssh/id_ed25519" >/dev/null
-          test -n "$VPS_KNOWN_HOSTS" || { echo "ERROR: Missing Actions variable VPS_KNOWN_HOSTS"; exit 1; }
+          test -n "$VPS_KNOWN_HOSTS" || { echo "ERROR: Missing Actions secret VPS_KNOWN_HOSTS"; exit 1; }
           printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
 
       - name: Copy and activate release on VPS
         env:
-          VPS_HOST: ${{ vars.VPS_HOST }}
-          VPS_USER: ${{ vars.VPS_USER }}
-          VPS_PORT: ${{ vars.VPS_PORT }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
           set -eu
-          test -n "$VPS_HOST" || { echo "ERROR: Missing Actions variable VPS_HOST"; exit 1; }
-          test -n "$VPS_USER" || { echo "ERROR: Missing Actions variable VPS_USER"; exit 1; }
+          test -n "$VPS_HOST" || { echo "ERROR: Missing Actions secret VPS_HOST"; exit 1; }
+          test -n "$VPS_USER" || { echo "ERROR: Missing Actions secret VPS_USER"; exit 1; }
           VPS_PORT="${VPS_PORT:-22}"
           RELEASE="/srv/risteel/releases/${GITHUB_SHA}"
           ARCHIVE="/tmp/risteel-${GITHUB_SHA}.tar.gz"
