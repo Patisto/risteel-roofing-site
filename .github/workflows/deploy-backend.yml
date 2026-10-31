@@ -1,0 +1,82 @@
+name: Build and deploy Risteel backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - 'cms/**'
+      - 'ops/**'
+      - 'ecosystem.config.cjs'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: risteel-backend-production
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install production dependencies
+        working-directory: server
+        run: npm install --omit=dev
+
+      - name: Package API and CMS release
+        run: |
+          set -eu
+          rm -rf release
+          mkdir -p release/server release/cms release/ops
+          cp -a server/index.js server/package.json server/node_modules release/server/
+          cp -a cms/. release/cms/
+          cp ecosystem.config.cjs release/
+          cp ops/deploy.cjs release/ops/
+          tar -czf risteel-backend.tar.gz -C release .
+
+      - name: Configure SSH
+        env:
+          VPS_SSH_KEY_B64: ${{ secrets.VPS_SSH_KEY_B64 }}
+          VPS_KNOWN_HOSTS: ${{ vars.VPS_KNOWN_HOSTS }}
+        run: |
+          set -eu
+          install -m 700 -d "$HOME/.ssh"
+          test -n "$VPS_SSH_KEY_B64" || { echo "ERROR: Missing Actions variable VPS_SSH_KEY_B64"; exit 1; }
+          printf '%s' "$VPS_SSH_KEY_B64" | base64 --decode > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          ssh-keygen -y -P '' -f "$HOME/.ssh/id_ed25519" >/dev/null
+          test -n "$VPS_KNOWN_HOSTS" || { echo "ERROR: Missing Actions variable VPS_KNOWN_HOSTS"; exit 1; }
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Copy and activate release on VPS
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_USER: ${{ vars.VPS_USER }}
+          VPS_PORT: ${{ vars.VPS_PORT }}
+        run: |
+          set -eu
+          test -n "$VPS_HOST" || { echo "ERROR: Missing Actions variable VPS_HOST"; exit 1; }
+          test -n "$VPS_USER" || { echo "ERROR: Missing Actions variable VPS_USER"; exit 1; }
+          VPS_PORT="${VPS_PORT:-22}"
+          RELEASE="/srv/risteel/releases/${GITHUB_SHA}"
+          ARCHIVE="/tmp/risteel-${GITHUB_SHA}.tar.gz"
+          scp -i "$HOME/.ssh/id_ed25519" -P "$VPS_PORT" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes risteel-backend.tar.gz "$VPS_USER@$VPS_HOST:$ARCHIVE"
+          ssh -i "$HOME/.ssh/id_ed25519" -p "$VPS_PORT" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" \
+            "set -eu
+             sudo mkdir -p '$RELEASE' /srv/risteel/shared/uploads
+             sudo chown -R '$VPS_USER:$VPS_USER' /srv/risteel
+             tar -xzf '$ARCHIVE' -C '$RELEASE'
+             rm -f '$ARCHIVE'
+             node '$RELEASE/ops/deploy.cjs' '$RELEASE'"

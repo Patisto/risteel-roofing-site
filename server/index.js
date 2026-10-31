@@ -2,7 +2,10 @@ import 'dotenv/config';
 import express from 'express';
 import pg from 'pg';
 import multer from 'multer';
-import { v2 as cloudinary } from 'cloudinary';
+import sharp from 'sharp';
+import { randomUUID } from 'node:crypto';
+import fs from 'node:fs/promises';
+import cors from 'cors';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,9 +13,11 @@ import { fileURLToPath } from 'node:url';
 const { Pool } = pg;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
+const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(root, 'uploads'));
+const publicBaseUrl = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
 const app = express();
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : undefined });
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024 }, fileFilter: (_req, file, cb) => cb(null, /^image\/(jpeg|png|webp|gif)$/.test(file.mimetype)) });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 }, fileFilter: (_req, file, cb) => cb(null, /^image\/(jpeg|png|webp|gif)$/.test(file.mimetype)) });
 const collections = {
   services: { table: 'services', fields: ['title','summary','description','image_url','sort_order','active'] },
   projects: { table: 'projects', fields: ['title','category','description','image_url','sort_order','active'] },
@@ -20,7 +25,7 @@ const collections = {
   testimonials: { table: 'testimonials', fields: ['quote','author','location','sort_order','active'] },
 };
 
-cloudinary.config({ cloud_name: process.env.CLOUDINARY_CLOUD_NAME, api_key: process.env.CLOUDINARY_API_KEY, api_secret: process.env.CLOUDINARY_API_SECRET, secure: true });
+
 
 async function initialize() {
   await pool.query(`
@@ -66,16 +71,13 @@ function requireAdmin(req, res, next) {
   if (provided.length !== expected.length || !crypto.timingSafeEqual(provided, expected)) return res.status(401).json({ error: 'Invalid session.' });
   try { const data = JSON.parse(Buffer.from(payload, 'base64url').toString()); if (data.exp < Date.now() || data.sub !== process.env.CMS_ADMIN_EMAIL) return res.status(401).json({ error: 'Session expired.' }); req.admin = data.sub; next(); } catch { return res.status(401).json({ error: 'Invalid session.' }); }
 }
-function uploadToCloudinary(buffer, mimetype) {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream({ folder: 'risteel-roofing', resource_type: 'image', format: mimetype.split('/')[1] }, (err, result) => err ? reject(err) : resolve(result));
-    stream.end(buffer);
-  });
-}
-
 app.disable('x-powered-by');
+app.use(cors({ origin: (process.env.CORS_ORIGIN || '').split(',').map(x=>x.trim()).filter(Boolean), credentials: false }));
 app.use(express.json({ limit: '1mb' }));
-app.use(express.static(root, { extensions: ['html'] }));
+await fs.mkdir(uploadDir, { recursive: true });
+app.use('/uploads', express.static(uploadDir, { maxAge: '30d', immutable: true }));
+app.use('/cms', express.static(path.join(root, 'cms')));
+app.get('/cms', (_req,res)=>res.redirect('/cms/'));
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.get('/api/site', async (_req, res, next) => {
   try {
@@ -113,7 +115,7 @@ app.patch('/api/admin/messages/:id', async (req, res, next) => { try { const { r
 app.delete('/api/admin/messages/:id', async (req, res, next) => { try { await pool.query('DELETE FROM messages WHERE id=$1', [req.params.id]); res.sendStatus(204); } catch (e) { next(e); } });
 app.get('/api/admin/settings', async (_req, res, next) => { try { res.json((await pool.query('SELECT * FROM site_settings WHERE id=1')).rows[0]); } catch (e) { next(e); } });
 app.put('/api/admin/settings', async (req, res, next) => { try { const url = String(req.body.hero_video_url || '').trim(); if (url && !/^https:\/\//i.test(url) && !/^assets\//.test(url)) return res.status(400).json({ error: 'Use an https:// URL or a local assets/ path.' }); const { rows } = await pool.query('UPDATE site_settings SET hero_video_url=$1,updated_at=now() WHERE id=1 RETURNING *', [url]); res.json(rows[0]); } catch (e) { next(e); } });
-app.post('/api/admin/upload', upload.single('image'), async (req, res, next) => { try { if (!req.file) return res.status(400).json({ error: 'Choose a JPG, PNG, WEBP or GIF image.' }); if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) return res.status(503).json({ error: 'Cloudinary is not configured.' }); const result = await uploadToCloudinary(req.file.buffer, req.file.mimetype); res.json({ url: result.secure_url, public_id: result.public_id }); } catch (e) { next(e); } });
+app.post('/api/admin/upload', upload.single('image'), async (req, res, next) => { try { if (!req.file) return res.status(400).json({ error: 'Choose a JPG, PNG, WEBP or GIF image.' }); const filename = `${randomUUID()}.webp`; await sharp(req.file.buffer).rotate().resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true }).webp({ quality: 82, effort: 5 }).toFile(path.join(uploadDir, filename)); res.json({ url: `${publicBaseUrl}/uploads/${filename}` }); } catch (e) { next(e); } });
 for (const [key, config] of Object.entries(collections)) {
   const table = config.table;
   app.get(`/api/admin/${key}`, async (_req, res, next) => { try { res.json((await pool.query(`SELECT * FROM ${table} ORDER BY sort_order,id`)).rows); } catch (e) { next(e); } });
