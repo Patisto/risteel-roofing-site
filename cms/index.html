@@ -1,1 +1,50 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>R & I Site CMS</title><link rel="stylesheet" href="cms.css"></head><body><header class="bar"><a href="../index.html">← View site</a><span>R&amp;I <b>Site CMS</b></span><button id="logout" class="hidden">Sign out</button></header><main class="shell"><section id="login" class="login card"><div class="brand-mark">R&amp;I</div><h1>Site CMS</h1><p>Sign in to manage website content and enquiries.</p><form id="login-form"><label>Email<input type="email" name="email" required autocomplete="username"></label><label>Password<input type="password" name="password" required autocomplete="current-password"></label><button class="primary">Sign in</button><p id="login-error" class="error"></p></form></section><section id="dashboard" class="hidden"><div class="welcome"><div><small>CONTENT MANAGEMENT</small><h1>Website dashboard</h1><p>Update your public site content and review incoming messages.</p></div></div><nav class="tabs" id="tabs"><button data-tab="services" class="active">Services</button><button data-tab="projects">Projects</button><button data-tab="gallery">Gallery</button><button data-tab="testimonials">Testimonials</button><button data-tab="video">Hero video</button><button data-tab="messages">Messages <span id="unread-count"></span></button></nav><section id="panel" class="card panel"></section></section></main><script src="cms.js" defer></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#141617">
+  <title>R &amp; I Site CMS</title>
+  <link rel="stylesheet" href="cms.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="https://risteelroofing.com"><span class="brand-mark">R&amp;I</span><span>R&amp;I <small>CONTENT MANAGER</small></span></a>
+    <div class="topbar-actions"><a class="view-site" href="https://risteelroofing.com" target="_blank" rel="noopener">View website <span>↗</span></a><button id="logout" class="logout hidden">Sign out</button></div>
+  </header>
+
+  <main class="login-wrap">
+    <section id="login" class="login-card">
+      <span class="login-kicker">R&amp;I STEEL ROOFING</span>
+      <h1>Welcome back</h1>
+      <p>Sign in to manage your website content and enquiries.</p>
+      <form id="login-form">
+        <label>Email address<input type="email" name="email" required autocomplete="username"></label>
+        <label>Password<input type="password" name="password" required autocomplete="current-password"></label>
+        <button class="primary login-submit" type="submit">Sign in</button>
+        <p id="login-error" class="feedback error" role="alert"></p>
+      </form>
+    </section>
+  </main>
+
+  <div id="dashboard" class="dashboard hidden">
+    <aside class="sidebar">
+      <div class="sidebar-heading"><span class="sidebar-eyebrow">WORKSPACE</span><strong>Manage website</strong></div>
+      <nav id="tabs" class="side-nav" aria-label="CMS sections">
+        <button data-tab="services" class="active"><span class="nav-icon">▦</span>Services</button>
+        <button data-tab="projects"><span class="nav-icon">⌂</span>Projects</button>
+        <button data-tab="gallery"><span class="nav-icon">▧</span>Gallery</button>
+        <button data-tab="testimonials"><span class="nav-icon">❝</span>Testimonials</button>
+        <button data-tab="messages"><span class="nav-icon">✉</span>Messages <span id="unread-count" class="unread-count"></span></button>
+      </nav>
+      <div class="sidebar-foot"><span class="status-dot"></span> Content is saved to your website</div>
+    </aside>
+    <main class="workspace">
+      <section class="welcome"><div><span class="welcome-kicker">CONTENT MANAGEMENT</span><h1>Website dashboard</h1><p>Manage the content visitors see on your website.</p></div></section>
+      <section id="panel" class="panel" aria-live="polite"></section>
+    </main>
+  </div>
+
+  <script src="cms.js" defer></script>
+</body>
+</html>
