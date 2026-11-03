@@ -1,0 +1,20 @@
+{
+  "redirects": [
+    {
+      "source": "/cms",
+      "destination": "/cms/",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/cms/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    }
+  ]
+}

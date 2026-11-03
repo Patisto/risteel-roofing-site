@@ -23,6 +23,8 @@ The server creates its tables and inserts starter content the first time it conn
 
 The CMS is available at `/cms/`. Contact forms submit to Express and are stored for review in its Messages tab. Change copy and static layout in the HTML files and shared styles in `styles.css`.
 
+If the public site is deployed on Vercel, keep this repository as the Vercel project root. `vercel.json` redirects `/cms` to `/cms/` and disables caching for CMS files so the current sidebar and CMS sections are loaded after deployment.
+
 ## VPS deployment
 
 The GitHub Actions workflow deploys only the Express API and CMS files when `server/`, `cms/`, `ops/`, or the workflow changes on `main`. Configure Actions variable `VPS_HOST`, `VPS_USER`, `VPS_PORT`, and `VPS_KNOWN_HOSTS`, plus secret `VPS_SSH_KEY_B64`. On the VPS, install Node.js 22 and PM2, create `/srv/risteel/shared/.env` from `.env.example`, and configure PM2 startup for the deploy user. Uploaded images persist at `/srv/risteel/shared/uploads` across releases.
