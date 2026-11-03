@@ -24,6 +24,7 @@ const collections = {
   gallery: { table: 'gallery_items', fields: ['title','image_url','alt_text','sort_order','active'] },
   testimonials: { table: 'testimonials', fields: ['quote','author','location','sort_order','active'] },
   blog: { table: 'blog_posts', fields: ['title','summary','content','image_url','sort_order','active'] },
+  team: { table: 'team_members', fields: ['name','role','bio','image_url','sort_order','active'] },
 };
 
 
@@ -36,6 +37,7 @@ async function initialize() {
     CREATE TABLE IF NOT EXISTS gallery_items (id bigserial PRIMARY KEY, title text NOT NULL DEFAULT '', image_url text NOT NULL, alt_text text NOT NULL DEFAULT '', sort_order integer NOT NULL DEFAULT 0, active boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now());
     CREATE TABLE IF NOT EXISTS testimonials (id bigserial PRIMARY KEY, quote text NOT NULL, author text NOT NULL DEFAULT '', location text NOT NULL DEFAULT '', sort_order integer NOT NULL DEFAULT 0, active boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now());
     CREATE TABLE IF NOT EXISTS blog_posts (id bigserial PRIMARY KEY, title text NOT NULL, summary text NOT NULL DEFAULT '', content text NOT NULL DEFAULT '', image_url text NOT NULL DEFAULT '', sort_order integer NOT NULL DEFAULT 0, active boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now());
+    CREATE TABLE IF NOT EXISTS team_members (id bigserial PRIMARY KEY, name text NOT NULL, role text NOT NULL DEFAULT '', bio text NOT NULL DEFAULT '', image_url text NOT NULL DEFAULT '', sort_order integer NOT NULL DEFAULT 0, active boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now());
     CREATE TABLE IF NOT EXISTS messages (id bigserial PRIMARY KEY, name text NOT NULL, email text NOT NULL, phone text NOT NULL DEFAULT '', service text NOT NULL DEFAULT '', message text NOT NULL, read boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now());
   `);
   await pool.query("ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS hero_image_url text NOT NULL DEFAULT 'assets/risteel/Rooftop Renovation Hero Banner.png'");
@@ -75,6 +77,24 @@ async function initialize() {
       ],
     );
   }
+  const teamCount = await pool.query('SELECT count(*)::int AS n FROM team_members');
+  if (!teamCount.rows[0].n) {
+    await pool.query(
+      'INSERT INTO team_members (name,role,bio,image_url,sort_order) VALUES ($1,$2,$3,$4,$5),($6,$7,$8,$9,$10)',
+      [
+        'R & I Steel Team',
+        'Roofing & fabrication specialists',
+        'A practical local team focused on careful workmanship from site measure to handover.',
+        'assets/risteel/image2.jpg',
+        0,
+        'Project team',
+        'Site installation and support',
+        'Our team works together to deliver dependable results for homes and businesses across Malawi.',
+        'assets/risteel/image4.jpg',
+        1,
+      ],
+    );
+  }
 }
 
 function signToken(email) {
@@ -109,8 +129,9 @@ app.get('/api/site', async (_req, res, next) => {
       pool.query('SELECT id,title,image_url,alt_text FROM gallery_items WHERE active=true ORDER BY sort_order,id'),
       pool.query('SELECT id,quote,author,location FROM testimonials WHERE active=true ORDER BY sort_order,id'),
       pool.query('SELECT id,title,summary,content,image_url,created_at FROM blog_posts WHERE active=true ORDER BY sort_order,id,created_at DESC'),
+      pool.query('SELECT id,name,role,bio,image_url FROM team_members WHERE active=true ORDER BY sort_order,id'),
     ]);
-    res.json({ settings: settings.rows[0] || {}, services: data[0].rows, projects: data[1].rows, gallery: data[2].rows, testimonials: data[3].rows, blog: data[4].rows });
+    res.json({ settings: settings.rows[0] || {}, services: data[0].rows, projects: data[1].rows, gallery: data[2].rows, testimonials: data[3].rows, blog: data[4].rows, team: data[5].rows });
   } catch (e) { next(e); }
 });
 app.post('/api/contact', async (req, res, next) => {
@@ -150,7 +171,7 @@ app.post('/api/admin/upload', upload.single('image'), async (req, res, next) => 
 for (const [key, config] of Object.entries(collections)) {
   const table = config.table;
   app.get(`/api/admin/${key}`, async (_req, res, next) => { try { res.json((await pool.query(`SELECT * FROM ${table} ORDER BY sort_order,id`)).rows); } catch (e) { next(e); } });
-  app.post(`/api/admin/${key}`, async (req, res, next) => { try { const data = Object.fromEntries(config.fields.filter(f => f in (req.body || {})).map(f => [f, req.body[f]])); if (!data.title && !data.quote) return res.status(400).json({ error: 'A title or testimonial quote is required.' }); const fields=Object.keys(data); const vals=fields.map(f=>data[f]); const {rows}=await pool.query(`INSERT INTO ${table} (${fields.join(',')}) VALUES (${fields.map((_,i)=>`$${i+1}`).join(',')}) RETURNING *`,vals); res.status(201).json(rows[0]); } catch(e){next(e);} });
+  app.post(`/api/admin/${key}`, async (req, res, next) => { try { const data = Object.fromEntries(config.fields.filter(f => f in (req.body || {})).map(f => [f, req.body[f]])); if (!data.title && !data.quote && !data.name) return res.status(400).json({ error: 'A title, name or testimonial quote is required.' }); const fields=Object.keys(data); const vals=fields.map(f=>data[f]); const {rows}=await pool.query(`INSERT INTO ${table} (${fields.join(',')}) VALUES (${fields.map((_,i)=>`$${i+1}`).join(',')}) RETURNING *`,vals); res.status(201).json(rows[0]); } catch(e){next(e);} });
   app.put(`/api/admin/${key}/:id`, async (req, res, next) => { try { const data=Object.fromEntries(config.fields.filter(f=>f in (req.body||{})).map(f=>[f,req.body[f]])); const fields=Object.keys(data); if(!fields.length)return res.status(400).json({error:'No editable fields provided.'}); const vals=fields.map(f=>data[f]); const {rows}=await pool.query(`UPDATE ${table} SET ${fields.map((f,i)=>`${f}=$${i+1}`).join(',')} WHERE id=$${fields.length+1} RETURNING *`,[...vals,req.params.id]); if(!rows[0])return res.sendStatus(404); res.json(rows[0]);}catch(e){next(e);} });
   app.delete(`/api/admin/${key}/:id`, async (req,res,next)=>{try{const result=await pool.query(`DELETE FROM ${table} WHERE id=$1`,[req.params.id]);if(!result.rowCount)return res.sendStatus(404);res.sendStatus(204);}catch(e){next(e);}});
 }

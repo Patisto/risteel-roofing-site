@@ -11,6 +11,7 @@ const defs={
   projects:{title:'Projects',image:true,fields:[['title','Project title','text'],['category','Category','text'],['description','Description','textarea'],['sort_order','Display order','number'],['active','Visible on website','checkbox']]},
   gallery:{title:'Gallery',image:true,fields:[['title','Image title','text'],['alt_text','Image description','text'],['sort_order','Display order','number'],['active','Visible on website','checkbox']]},
   blog:{title:'Blog',image:true,fields:[['title','Post title','text'],['summary','Short summary','textarea'],['content','Article content','textarea'],['sort_order','Display order','number'],['active','Publish on website','checkbox']]},
+  team:{title:'Team',image:true,fields:[['name','Name','text'],['role','Role','text'],['bio','Bio','textarea'],['sort_order','Display order','number'],['active','Show on website','checkbox']]},
   testimonials:{title:'Testimonials',fields:[['quote','Testimonial','textarea'],['author','Client label','text'],['location','Location','text'],['sort_order','Display order','number'],['active','Visible on website','checkbox']]}
 };
 
@@ -144,7 +145,7 @@ async function renderCollection(key,{selectedId=null,notice=''}={}){
   const def=defs[key];
   selected=records.find(record=>String(record.id)===String(selectedId))||records[0]||null;
   const itemMarkup=records.length?records.map(record=>{
-    const title=record.title||record.author||record.quote||'Untitled';
+    const title=record.title||record.name||record.author||record.quote||'Untitled';
     return `<button type="button" class="item ${selected&&String(selected.id)===String(record.id)?'active':''}" data-id="${record.id}">${record.image_url?`<img src="${escapeHtml(imageSrc(record.image_url))}" alt="">`:'<span class="item-placeholder" aria-hidden="true">＋</span>'}<span><b>${escapeHtml(title)}</b><small>${record.active?'Visible':'Hidden'}</small></span></button>`;
   }).join(''):'<div class="empty">No items yet. Add your first one to get started.</div>';
   $('#panel').innerHTML=`<div class="panel-head"><div><h2>${escapeHtml(def.title)}</h2><p>Changes appear on your website after saving.</p></div><button type="button" class="add-button" id="add-record">＋ Add ${escapeHtml(def.title.toLowerCase().replace(/s$/,''))}</button></div><div class="content-layout"><div class="item-list">${itemMarkup}</div><form class="editor" id="record-form" novalidate></form></div>`;
@@ -162,8 +163,8 @@ function renderForm(key,data={},notice=''){
   const fields=def.fields.map(([name,label,type])=>{
     const value=data[name]??(name==='active'?true:'');
     if(type==='checkbox')return `<label class="check-label"><input name="${name}" type="checkbox" ${value?'checked':''}>${label}</label>`;
-    if(type==='textarea')return `<label>${label}<textarea name="${name}" ${name==='quote'||name==='title'?'required':''}>${escapeHtml(value)}</textarea></label>`;
-    return `<label>${label}<input name="${name}" type="${type}" value="${escapeHtml(value)}" ${name==='title'?'required':''}></label>`;
+    if(type==='textarea')return `<label>${label}<textarea name="${name}" ${name==='quote'||name==='title'||name==='bio'?'required':''}>${escapeHtml(value)}</textarea></label>`;
+    return `<label>${label}<input name="${name}" type="${type}" value="${escapeHtml(value)}" ${name==='title'||name==='name'?'required':''}></label>`;
   }).join('');
   const currentImage=data.image_url||'';
   const imageField=def.image?`<div class="image-field"><label>Website image</label><div class="image-preview" id="image-preview">${currentImage?`<img src="${escapeHtml(imageSrc(currentImage))}" alt="Current image preview">`:'Choose an image to preview it here'}</div><label class="upload-control"><span>${currentImage?'Choose a replacement image':'Choose an image'}</span><input name="upload" type="file" accept="image/jpeg,image/png,image/webp,image/gif" ${currentImage?'':'required'}></label><p class="helper">Select a JPG, PNG, WEBP or GIF image (maximum 15 MB). It will be resized and saved to the website.</p></div>`:'';

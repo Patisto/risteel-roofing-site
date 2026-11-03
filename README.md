@@ -1,6 +1,6 @@
 # R & I Steel Roofing website and CMS
 
-Static HTML/CSS pages served by a small Express app. The CMS lets an administrator update the hero image/video, services and images, projects, gallery photos, blog articles, testimonials, and read/delete contact enquiries.
+Static HTML/CSS pages served by a small Express app. The CMS lets an administrator update the hero image/video, services and images, projects, gallery photos, blog articles, team members, testimonials, and read/delete contact enquiries.
 
 ## Run locally
 
@@ -9,7 +9,7 @@ Static HTML/CSS pages served by a small Express app. The CMS lets an administrat
 3. Run `npm install` and then `npm start`.
 4. Visit `http://localhost:3000` for the website and `http://localhost:3000/cms/` for the CMS.
 
-The server creates its tables and inserts starter content the first time it connects. Database tables are in Neon/Postgres. Uploaded images are resized and compressed to WebP, then stored in the VPS persistent uploads directory. New enquiries are saved in the `messages` table. Published blog articles are returned by `/api/site` and appear on the blog page and homepage slideshow. The website and CMS use the same Express origin; keep database and token secrets on the server.
+The server creates its tables and inserts starter content the first time it connects. Database tables are in Neon/Postgres. Uploaded images are resized and compressed to WebP, then stored in the VPS persistent uploads directory. New enquiries are saved in the `messages` table. Published blog articles and active team members are returned by `/api/site` and appear on the blog/homepage and About page. The public pages also show a five-second rotating Chichewa, Tumbuka and English greeting on entry. The website and CMS use the same Express origin; keep database and token secrets on the server.
 
 ## Environment settings
 
