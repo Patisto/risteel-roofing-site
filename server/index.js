@@ -23,19 +23,22 @@ const collections = {
   projects: { table: 'projects', fields: ['title','category','description','image_url','sort_order','active'] },
   gallery: { table: 'gallery_items', fields: ['title','image_url','alt_text','sort_order','active'] },
   testimonials: { table: 'testimonials', fields: ['quote','author','location','sort_order','active'] },
+  blog: { table: 'blog_posts', fields: ['title','summary','content','image_url','sort_order','active'] },
 };
 
 
 
 async function initialize() {
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS site_settings (id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1), hero_video_url text NOT NULL DEFAULT 'https://accreditedroofing.co.nz/wp-content/uploads/2026/08/hero-loop-1280.mp4', updated_at timestamptz NOT NULL DEFAULT now());
+    CREATE TABLE IF NOT EXISTS site_settings (id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1), hero_video_url text NOT NULL DEFAULT 'https://accreditedroofing.co.nz/wp-content/uploads/2026/08/hero-loop-1280.mp4', hero_image_url text NOT NULL DEFAULT 'assets/risteel/Rooftop Renovation Hero Banner.png', updated_at timestamptz NOT NULL DEFAULT now());
     CREATE TABLE IF NOT EXISTS services (id bigserial PRIMARY KEY, title text NOT NULL, summary text NOT NULL DEFAULT '', description text NOT NULL DEFAULT '', image_url text NOT NULL DEFAULT '', sort_order integer NOT NULL DEFAULT 0, active boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now());
     CREATE TABLE IF NOT EXISTS projects (id bigserial PRIMARY KEY, title text NOT NULL, category text NOT NULL DEFAULT '', description text NOT NULL DEFAULT '', image_url text NOT NULL DEFAULT '', sort_order integer NOT NULL DEFAULT 0, active boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now());
     CREATE TABLE IF NOT EXISTS gallery_items (id bigserial PRIMARY KEY, title text NOT NULL DEFAULT '', image_url text NOT NULL, alt_text text NOT NULL DEFAULT '', sort_order integer NOT NULL DEFAULT 0, active boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now());
     CREATE TABLE IF NOT EXISTS testimonials (id bigserial PRIMARY KEY, quote text NOT NULL, author text NOT NULL DEFAULT '', location text NOT NULL DEFAULT '', sort_order integer NOT NULL DEFAULT 0, active boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now());
+    CREATE TABLE IF NOT EXISTS blog_posts (id bigserial PRIMARY KEY, title text NOT NULL, summary text NOT NULL DEFAULT '', content text NOT NULL DEFAULT '', image_url text NOT NULL DEFAULT '', sort_order integer NOT NULL DEFAULT 0, active boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now());
     CREATE TABLE IF NOT EXISTS messages (id bigserial PRIMARY KEY, name text NOT NULL, email text NOT NULL, phone text NOT NULL DEFAULT '', service text NOT NULL DEFAULT '', message text NOT NULL, read boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now());
   `);
+  await pool.query("ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS hero_image_url text NOT NULL DEFAULT 'assets/risteel/Rooftop Renovation Hero Banner.png'");
   await pool.query("INSERT INTO site_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING");
   const seeds = [
     ['services', ['Steel Truss Installation','Iron Sheet Installation','Steel Window Fabrication','Electrical Installation','Plumbing Services'], ['Engineered structures for durable roof frames.','Careful fitting for a clean, weather-ready finish.','Custom steel frames made to your project.','Electrical installation for homes and businesses.','Plumbing installation and repair.'], ['Engineered steel trusses for strong, long-lasting roof structures on homes and commercial buildings.','Precision iron sheet roofing that stands up to Malawi’s rains and sun, fitted for a clean, tight finish.','Custom-fabricated steel window frames built to your dimensions, security needs and design.','Electrical wiring and fittings for residential and commercial properties.','Reliable plumbing installation and repair, from new builds to existing systems.'], ['service1.png','service2.png','service3.png','service4.png','service5.png']],
@@ -53,6 +56,24 @@ async function initialize() {
       const placeholders = fields.map((_, j) => `$${j + 1}`).join(',');
       await pool.query(`INSERT INTO ${table === 'gallery' ? 'gallery_items' : table} (${cols}) VALUES (${placeholders})`, fields);
     }
+  }
+  const blogCount = await pool.query('SELECT count(*)::int AS n FROM blog_posts');
+  if (!blogCount.rows[0].n) {
+    await pool.query(
+      'INSERT INTO blog_posts (title,summary,content,image_url,sort_order) VALUES ($1,$2,$3,$4,$5),($6,$7,$8,$9,$10)',
+      [
+        'Planning a roof that lasts',
+        'The most useful decisions happen before installation begins.',
+        'A good roof starts with a careful site measure, suitable materials and a clear installation plan. Taking time to understand the building and the weather conditions helps create a stronger, cleaner result.',
+        'assets/risteel/Rooftop Renovation Hero Banner.png',
+        0,
+        'Why steel trusses are a smart foundation',
+        'A strong roof structure supports everything that follows.',
+        'Steel trusses provide a durable foundation for roofing projects and can be measured and fabricated to suit the building. Our team helps clients choose a practical approach for their home or business.',
+        'assets/risteel/image2.jpg',
+        1,
+      ],
+    );
   }
 }
 
@@ -82,13 +103,14 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.get('/api/site', async (_req, res, next) => {
   try {
     const [settings, ...data] = await Promise.all([
-      pool.query('SELECT hero_video_url FROM site_settings WHERE id=1'),
+      pool.query('SELECT hero_video_url,hero_image_url FROM site_settings WHERE id=1'),
       pool.query('SELECT id,title,summary,description,image_url FROM services WHERE active=true ORDER BY sort_order,id'),
       pool.query('SELECT id,title,category,description,image_url FROM projects WHERE active=true ORDER BY sort_order,id'),
       pool.query('SELECT id,title,image_url,alt_text FROM gallery_items WHERE active=true ORDER BY sort_order,id'),
       pool.query('SELECT id,quote,author,location FROM testimonials WHERE active=true ORDER BY sort_order,id'),
+      pool.query('SELECT id,title,summary,content,image_url,created_at FROM blog_posts WHERE active=true ORDER BY sort_order,id,created_at DESC'),
     ]);
-    res.json({ settings: settings.rows[0] || {}, services: data[0].rows, projects: data[1].rows, gallery: data[2].rows, testimonials: data[3].rows });
+    res.json({ settings: settings.rows[0] || {}, services: data[0].rows, projects: data[1].rows, gallery: data[2].rows, testimonials: data[3].rows, blog: data[4].rows });
   } catch (e) { next(e); }
 });
 app.post('/api/contact', async (req, res, next) => {
@@ -114,7 +136,16 @@ app.get('/api/admin/messages', async (_req, res, next) => { try { res.json((awai
 app.patch('/api/admin/messages/:id', async (req, res, next) => { try { const { rows } = await pool.query('UPDATE messages SET read=$1 WHERE id=$2 RETURNING *', [Boolean(req.body.read), req.params.id]); if (!rows[0]) return res.sendStatus(404); res.json(rows[0]); } catch (e) { next(e); } });
 app.delete('/api/admin/messages/:id', async (req, res, next) => { try { await pool.query('DELETE FROM messages WHERE id=$1', [req.params.id]); res.sendStatus(204); } catch (e) { next(e); } });
 app.get('/api/admin/settings', async (_req, res, next) => { try { res.json((await pool.query('SELECT * FROM site_settings WHERE id=1')).rows[0]); } catch (e) { next(e); } });
-app.put('/api/admin/settings', async (req, res, next) => { try { const url = String(req.body.hero_video_url || '').trim(); if (url && !/^https:\/\//i.test(url) && !/^assets\//.test(url)) return res.status(400).json({ error: 'Use an https:// URL or a local assets/ path.' }); const { rows } = await pool.query('UPDATE site_settings SET hero_video_url=$1,updated_at=now() WHERE id=1 RETURNING *', [url]); res.json(rows[0]); } catch (e) { next(e); } });
+app.put('/api/admin/settings', async (req, res, next) => {
+  try {
+    const videoUrl = String(req.body.hero_video_url || '').trim();
+    const imageUrl = String(req.body.hero_image_url || '').trim();
+    if (videoUrl && !/^https:\/\//i.test(videoUrl) && !/^assets\//.test(videoUrl)) return res.status(400).json({ error: 'Use an https:// URL or a local assets/ path for the hero video.' });
+    if (imageUrl && !/^https?:\/\//i.test(imageUrl) && !/^\/uploads\//.test(imageUrl) && !/^assets\//.test(imageUrl)) return res.status(400).json({ error: 'Use an image URL, an /uploads/ path or a local assets/ path for the hero image.' });
+    const { rows } = await pool.query('UPDATE site_settings SET hero_video_url=$1,hero_image_url=$2,updated_at=now() WHERE id=1 RETURNING *', [videoUrl, imageUrl]);
+    res.json(rows[0]);
+  } catch (e) { next(e); }
+});
 app.post('/api/admin/upload', upload.single('image'), async (req, res, next) => { try { if (!req.file) return res.status(400).json({ error: 'Choose a JPG, PNG, WEBP or GIF image.' }); const filename = `${randomUUID()}.webp`; await sharp(req.file.buffer).rotate().resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true }).webp({ quality: 82, effort: 5 }).toFile(path.join(uploadDir, filename)); res.json({ url: `${publicBaseUrl}/uploads/${filename}` }); } catch (e) { next(e); } });
 for (const [key, config] of Object.entries(collections)) {
   const table = config.table;

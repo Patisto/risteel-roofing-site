@@ -10,6 +10,7 @@ const defs={
   services:{title:'Services',image:true,fields:[['title','Service name','text'],['summary','Short summary','textarea'],['description','Full details','textarea'],['sort_order','Display order','number'],['active','Visible on website','checkbox']]},
   projects:{title:'Projects',image:true,fields:[['title','Project title','text'],['category','Category','text'],['description','Description','textarea'],['sort_order','Display order','number'],['active','Visible on website','checkbox']]},
   gallery:{title:'Gallery',image:true,fields:[['title','Image title','text'],['alt_text','Image description','text'],['sort_order','Display order','number'],['active','Visible on website','checkbox']]},
+  blog:{title:'Blog',image:true,fields:[['title','Post title','text'],['summary','Short summary','textarea'],['content','Article content','textarea'],['sort_order','Display order','number'],['active','Publish on website','checkbox']]},
   testimonials:{title:'Testimonials',fields:[['quote','Testimonial','textarea'],['author','Client label','text'],['location','Location','text'],['sort_order','Display order','number'],['active','Visible on website','checkbox']]}
 };
 
@@ -93,8 +94,50 @@ async function renderTab(){
   showLoading();
   try{
     if(activeTab==='messages')return await renderMessages();
+    if(activeTab==='settings')return await renderSettings();
     await renderCollection(activeTab);
   }catch(error){showError(error)}
+}
+async function renderSettings(){
+  const settings=await request(`${api}/admin/settings`);
+  $('#panel').innerHTML=`<div class="panel-head"><div><h2>Hero settings</h2><p>Choose the image and optional video shown at the top of your homepage.</p></div></div><form class="editor settings-editor" id="settings-form" novalidate>
+    <div class="image-field"><label>Hero image</label><div class="image-preview" id="hero-image-preview">${settings.hero_image_url?`<img src="${escapeHtml(imageSrc(settings.hero_image_url))}" alt="Current hero preview">`:'Choose an image to preview it here'}</div><label class="upload-control"><span>Choose a hero image</span><input name="hero_image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><p class="helper">This image is the fallback background and remains visible while the hero video loads.</p></div>
+    <label>Hero video URL<input name="hero_video_url" type="url" value="${escapeHtml(settings.hero_video_url||'')}" placeholder="https://example.com/hero.mp4"></label>
+    <p class="helper">Use an https:// video URL or leave it blank to show only the hero image.</p>
+    <div class="actions"><button class="save-button" type="submit">Save hero settings</button></div><p class="notice" id="settings-notice" role="status" aria-live="polite"></p>
+  </form>`;
+  const form=$('#settings-form');
+  const fileInput=form.elements.hero_image;
+  fileInput.addEventListener('change',()=>{
+    const file=fileInput.files[0];
+    if(!file)return;
+    const preview=$('#hero-image-preview');
+    preview.innerHTML=`<img src="${URL.createObjectURL(file)}" alt="Selected hero preview">`;
+  });
+  form.onsubmit=event=>saveSettings(event,settings);
+}
+async function saveSettings(event,originalSettings){
+  event.preventDefault();
+  const form=event.currentTarget;
+  if(!form.reportValidity())return;
+  const button=form.querySelector('.save-button');
+  const notice=$('#settings-notice');
+  button.disabled=true;
+  try{
+    let imageUrl=originalSettings.hero_image_url||'';
+    const file=form.elements.hero_image.files[0];
+    if(file){
+      button.innerHTML=spinner('Uploading image…');
+      const body=new FormData();
+      body.append('image',file);
+      imageUrl=(await request(`${api}/admin/upload`,{method:'POST',body})).url;
+    }
+    button.innerHTML=spinner('Saving settings…');
+    await request(`${api}/admin/settings`,{method:'PUT',body:JSON.stringify({hero_image_url:imageUrl,hero_video_url:form.elements.hero_video_url.value.trim()})});
+    notice.textContent='Hero settings saved successfully.';
+    notice.className='notice success';
+  }catch(error){notice.textContent=error.message;notice.className='notice error'}
+  finally{button.disabled=false;button.textContent='Save hero settings'}
 }
 async function renderCollection(key,{selectedId=null,notice=''}={}){
   records=await request(`${api}/admin/${key}`);
