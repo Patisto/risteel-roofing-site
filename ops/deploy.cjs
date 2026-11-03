@@ -19,6 +19,10 @@ const tempLink = `${current}.next`;
 try { fs.unlinkSync(tempLink); } catch {}
 fs.symlinkSync(release, tempLink, 'dir');
 fs.renameSync(tempLink, current);
-function pm2Reload() { execFileSync('pm2', ['startOrReload', path.join(release, 'ecosystem.config.cjs'), '--update-env'], { stdio: 'inherit', cwd: release }); execFileSync('pm2', ['save'], { stdio: 'inherit' }); }
+function pm2Reload() {
+  try { execFileSync('pm2', ['delete', 'risteel-api'], { stdio: 'inherit', cwd: release }); } catch {}
+  execFileSync('pm2', ['start', path.join(release, 'ecosystem.config.cjs'), '--update-env'], { stdio: 'inherit', cwd: release });
+  execFileSync('pm2', ['save'], { stdio: 'inherit', cwd: release });
+}
 function healthCheck() { return new Promise((resolve, reject) => { const req=http.get('http://127.0.0.1:3000/api/health',res=>{res.resume();res.statusCode===200?resolve():reject(new Error(`Health check returned ${res.statusCode}`))});req.setTimeout(3000,()=>req.destroy(new Error('Health check timed out')));req.on('error',reject);}); }
 (async()=>{try{pm2Reload();let healthy=false;for(let i=0;i<15;i++){try{await healthCheck();healthy=true;break}catch{await new Promise(r=>setTimeout(r,1000))}}if(!healthy)throw new Error('API health check failed after deployment');console.log(`Activated ${release}`)}catch(error){if(previous){const rollback=`${current}.rollback`;try{fs.unlinkSync(rollback)}catch{};fs.symlinkSync(previous,rollback,'dir');fs.renameSync(rollback,current);try{pm2Reload()}catch{}}throw error}})().catch(e=>{console.error(e);process.exit(1)});
