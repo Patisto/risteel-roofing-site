@@ -1,9 +1,12 @@
 {
-  "redirects": [
+  "rewrites": [
     {
       "source": "/cms",
-      "destination": "/cms/",
-      "permanent": true
+      "destination": "/cms/index.html"
+    },
+    {
+      "source": "/cms/",
+      "destination": "/cms/index.html"
     }
   ],
   "headers": [
