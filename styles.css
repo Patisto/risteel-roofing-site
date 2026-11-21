@@ -158,3 +158,18 @@
 @media(prefers-reduced-motion:reduce){.reveal-on-scroll{transition-delay:0ms}}
 .blog-full-content{width:100%;margin-top:16px;padding-top:16px;border-top:1px solid #e8edf0;color:#4b5563;font-size:14px;line-height:1.75;white-space:pre-line;overflow-wrap:anywhere}
 .blog-full-content[hidden]{display:none}
+
+/* Unified navy header with high contrast navigation */
+.header{background:#102d76;color:#fff;box-shadow:0 3px 16px #081e2d30}
+.header .nav nav a:not(.nav-cta){color:#e7edf7}
+.header .nav nav a:not(.nav-cta):hover{color:#ffb27f}
+.header .nav nav a[aria-current="page"]:not(.nav-cta){color:#fff;background:#ffffff12;box-shadow:inset 0 -2px #f28a4b}
+.header .ri-brand{color:#fff}
+.header .ri-brand b{color:#fff}
+.header .ri-brand small{color:#ffc095}
+.header .ri-brand img{padding:5px;border-radius:6px;box-shadow:0 1px 5px #06172b35}
+.header .nav .nav-cta{background:#c94f11;color:#fff}
+.header .nav .nav-cta:hover{background:#a8400c;color:#fff}
+.topbar a{background:#c94f11}
+.topbar a:hover{background:#a8400c}
+@media(max-width:680px){.header .menu-toggle{color:#fff}.header .nav nav.open{background:#102d76;border-top:1px solid #ffffff25}.header .nav nav.open a:not(.nav-cta){color:#e7edf7}.header .nav nav.open a:not(.nav-cta):hover,.header .nav nav.open a[aria-current="page"]:not(.nav-cta){color:#ffc095}.header .nav nav.open .nav-cta{background:#c94f11;color:#fff}}
