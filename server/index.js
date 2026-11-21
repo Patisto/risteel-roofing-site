@@ -149,6 +149,24 @@ app.get('/api/site', async (_req, res, next) => {
     res.json({ settings: settings.rows[0] || {}, services: data[0].rows, projects: data[1].rows, gallery: data[2].rows, testimonials: data[3].rows, blog: data[4].rows, team: data[5].rows });
   } catch (e) { next(e); }
 });
+app.get('/share/blog/:id', async (req, res, next) => {
+  try {
+    const { rows } = await pool.query('SELECT id,title,summary,content,image_url FROM blog_posts WHERE id=$1 AND active=true', [req.params.id]);
+    const post = rows[0];
+    if (!post) return res.status(404).type('text').send('Blog post not found.');
+    const siteUrl = 'https://risteelroofing.com';
+    const articleUrl = `${siteUrl}/blog.html?post=${encodeURIComponent(post.id)}`;
+    const apiOrigin = publicBaseUrl || `${req.protocol}://${req.get('host')}`;
+    const imageUrl = /^https?:\/\//i.test(post.image_url) ? post.image_url
+      : post.image_url.startsWith('/uploads/') ? `${apiOrigin}${post.image_url}`
+      : post.image_url.startsWith('assets/') ? `${siteUrl}/${post.image_url.split('/').map(encodeURIComponent).join('/')}`
+      : `${siteUrl}/assets/risteel/Rooftop%20Renovation%20Hero%20Banner.png`;
+    const description = post.summary || String(post.content || '').replace(/\s+/g, ' ').slice(0, 220);
+    const escapeAttribute = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    res.set('Cache-Control', 'public, max-age=300');
+    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeAttribute(post.title)} | R &amp; I Steel Roofing</title><meta name="description" content="${escapeAttribute(description)}"><link rel="canonical" href="${escapeAttribute(articleUrl)}"><meta property="og:type" content="article"><meta property="og:site_name" content="R &amp; I Steel Roofing"><meta property="og:title" content="${escapeAttribute(post.title)}"><meta property="og:description" content="${escapeAttribute(description)}"><meta property="og:url" content="${escapeAttribute(articleUrl)}"><meta property="og:image" content="${escapeAttribute(imageUrl)}"><meta property="og:image:alt" content="${escapeAttribute(post.title)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeAttribute(post.title)}"><meta name="twitter:description" content="${escapeAttribute(description)}"><meta name="twitter:image" content="${escapeAttribute(imageUrl)}"><meta http-equiv="refresh" content="1;url=${escapeAttribute(articleUrl)}"></head><body><p>Opening article: <a href="${escapeAttribute(articleUrl)}">${escapeAttribute(post.title)}</a></p></body></html>`);
+  } catch (e) { next(e); }
+});
 app.post('/api/contact', async (req, res, next) => {
   try {
     const { name, email, phone = '', service = '', message } = req.body || {};

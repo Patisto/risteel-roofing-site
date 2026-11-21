@@ -84,3 +84,14 @@
 .team-card-copy>span{display:block;color:#8d3f18;font-size:11px;font-weight:800;line-height:1.5;letter-spacing:.7px;text-transform:uppercase}
 .team-card p{max-width:65ch;margin:16px 0 0;color:#374151;font-size:14px;line-height:1.6;overflow-wrap:anywhere}
 @media(max-width:680px){.team-grid,.blog-grid{grid-template-columns:1fr;gap:1.5rem}.team-card-copy{padding:22px}.team-card-image{aspect-ratio:4/3}.blog-card{min-height:400px}}
+.blog-card-actions{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;margin-top:auto;padding-top:16px}
+.blog-card-actions .blog-view-more{margin:0;padding:0}
+.blog-share{position:relative;display:inline-flex;align-items:center}
+.blog-share-toggle{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid #d8e0e5;border-radius:6px;background:#fff;color:#233a48;font:700 12px Manrope,Arial,sans-serif;cursor:pointer}
+.blog-share-toggle:hover{border-color:var(--blue);color:var(--blue)}
+.blog-share-menu{position:absolute;right:0;bottom:calc(100% + 8px);z-index:20;display:grid;min-width:150px;padding:7px;border:1px solid #e1e6e9;border-radius:8px;background:#fff;box-shadow:0 8px 28px #132c3b24}
+.blog-share-menu[hidden]{display:none}
+.blog-share-menu a,.blog-share-menu button{display:block;padding:9px 10px;border:0;border-radius:5px;background:none;color:#263b47;text-align:left;text-decoration:none;font:600 12px Manrope,Arial,sans-serif;cursor:pointer}
+.blog-share-menu a:hover,.blog-share-menu button:hover{background:#f1f5f7;color:var(--blue)}
+.blog-share-status{padding:3px 10px;color:#34704b;font-size:11px}
+.blog-dialog-copy>.blog-share{margin-top:24px}
