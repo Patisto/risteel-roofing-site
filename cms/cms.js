@@ -95,6 +95,7 @@ async function renderTab(){
   showLoading();
   try{
     if(activeTab==='messages')return await renderMessages();
+    if(activeTab==='comments')return await renderComments();
     if(activeTab==='settings')return await renderSettings();
     await renderCollection(activeTab);
   }catch(error){showError(error)}
@@ -230,5 +231,10 @@ async function renderMessages(){
     try{await request(`${api}/admin/messages/${button.dataset.message}`,{method:'PATCH',body:JSON.stringify({read:button.dataset.read==='true'})});await renderMessages()}
     catch(error){button.disabled=false;button.textContent='Could not save';button.title=error.message}
   });
+}
+async function renderComments(){
+  const comments=await request(`${api}/admin/comments`);
+  $('#panel').innerHTML=`<div class="panel-head"><div><h2>Blog comments</h2><p>${comments.length} ${comments.length===1?'comment':'comments'} on published blog posts</p></div></div>${comments.length?`<div class="message-list">${comments.map(item=>`<article class="message"><header><div><b>${escapeHtml(item.name)}</b><small><br>On <strong>${escapeHtml(item.post_title)}</strong> · ${new Date(item.created_at).toLocaleString()}</small></div><button class="delete-button" type="button" data-delete-comment="${item.id}">Delete</button></header><p>${escapeHtml(item.comment)}</p></article>`).join('')}</div>`:'<div class="empty">No comments yet.</div>'}`;
+  document.querySelectorAll('[data-delete-comment]').forEach(button=>button.onclick=async()=>{if(!confirm('Delete this comment?'))return;button.disabled=true;try{await request(`${api}/admin/comments/${button.dataset.deleteComment}`,{method:'DELETE'});await renderComments()}catch(error){button.disabled=false;button.title=error.message}});
 }
 if(token)enter();else login();
