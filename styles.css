@@ -95,3 +95,15 @@
 .blog-share-menu a:hover,.blog-share-menu button:hover{background:#f1f5f7;color:var(--blue)}
 .blog-share-status{padding:3px 10px;color:#34704b;font-size:11px}
 .blog-dialog-copy>.blog-share{margin-top:24px}
+
+/* Light footer treatment with the brand orange as a small accent */
+.footer{background:#f1f4f5;color:#263b49;border-top:4px solid #db5b18}
+.footer .ri-brand{color:#102d76}
+.footer .ri-brand b{color:#102d76}
+.footer .ri-brand small{color:#a94718}
+.footer h3,.footer-social h3{color:#102d76}
+.footer-about p,.footer-grid>div>p{color:#52616b}
+.footer-grid>div:not(:first-child) a,.footer-grid>.footer-social a{color:#405564}
+.footer-grid>div:not(:first-child) a:hover,.footer-grid>.footer-social a:hover,.footer-bottom a:hover{color:#b9470d}
+.footer-bottom{border-color:#d2dce1;color:#62717b}
+.footer-bottom a{color:#334b5a}
