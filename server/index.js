@@ -31,7 +31,7 @@ const collections = {
 
 async function initialize() {
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS site_settings (id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1), hero_video_url text NOT NULL DEFAULT 'https://accreditedroofing.co.nz/wp-content/uploads/2026/08/hero-loop-1280.mp4', hero_image_url text NOT NULL DEFAULT 'assets/risteel/Rooftop Renovation Hero Banner.png', updated_at timestamptz NOT NULL DEFAULT now());
+    CREATE TABLE IF NOT EXISTS site_settings (id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1), hero_video_url text NOT NULL DEFAULT 'https://accreditedroofing.co.nz/wp-content/uploads/2026/08/hero-loop-1280.mp4', hero_image_url text NOT NULL DEFAULT 'assets/risteel/Rooftop Renovation Hero Banner.png', page_hero_about text NOT NULL DEFAULT 'assets/risteel/image4.jpg', page_hero_services text NOT NULL DEFAULT 'assets/risteel/image1.jpg', page_hero_projects text NOT NULL DEFAULT 'assets/risteel/image2.jpg', page_hero_gallery text NOT NULL DEFAULT 'assets/risteel/image4.jpg', page_hero_blog text NOT NULL DEFAULT 'assets/risteel/Rooftop Renovation Hero Banner.png', page_hero_contact text NOT NULL DEFAULT 'assets/risteel/image6.jpg', about_story_image text NOT NULL DEFAULT 'assets/risteel/image2.jpg', home_who_we_are_image text NOT NULL DEFAULT 'assets/risteel/image2.jpg', story_heading text NOT NULL DEFAULT 'A local team built on practical skill and honest work.', story_paragraph_1 text NOT NULL DEFAULT 'R & I Steel Roofing is a provider of steel roofing and fabrication solutions in Malawi. Our team works on steel roof trusses, iron sheet roofing, custom steel windows, electrical installations and plumbing.', story_paragraph_2 text NOT NULL DEFAULT 'From the first site measure through to handover, we aim to communicate clearly, specify materials up front and deliver careful workmanship.', updated_at timestamptz NOT NULL DEFAULT now());
     CREATE TABLE IF NOT EXISTS services (id bigserial PRIMARY KEY, title text NOT NULL, summary text NOT NULL DEFAULT '', description text NOT NULL DEFAULT '', image_url text NOT NULL DEFAULT '', sort_order integer NOT NULL DEFAULT 0, active boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now());
     CREATE TABLE IF NOT EXISTS projects (id bigserial PRIMARY KEY, title text NOT NULL, category text NOT NULL DEFAULT '', description text NOT NULL DEFAULT '', image_url text NOT NULL DEFAULT '', sort_order integer NOT NULL DEFAULT 0, active boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now());
     CREATE TABLE IF NOT EXISTS gallery_items (id bigserial PRIMARY KEY, title text NOT NULL DEFAULT '', image_url text NOT NULL, alt_text text NOT NULL DEFAULT '', sort_order integer NOT NULL DEFAULT 0, active boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now());
@@ -41,6 +41,9 @@ async function initialize() {
     CREATE TABLE IF NOT EXISTS messages (id bigserial PRIMARY KEY, name text NOT NULL, email text NOT NULL, phone text NOT NULL DEFAULT '', service text NOT NULL DEFAULT '', message text NOT NULL, read boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now());
   `);
   await pool.query("ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS hero_image_url text NOT NULL DEFAULT 'assets/risteel/Rooftop Renovation Hero Banner.png'");
+  for (const [column, value] of Object.entries({ page_hero_about: 'assets/risteel/image4.jpg', page_hero_services: 'assets/risteel/image1.jpg', page_hero_projects: 'assets/risteel/image2.jpg', page_hero_gallery: 'assets/risteel/image4.jpg', page_hero_blog: 'assets/risteel/Rooftop Renovation Hero Banner.png', page_hero_contact: 'assets/risteel/image6.jpg', about_story_image: 'assets/risteel/image2.jpg', home_who_we_are_image: 'assets/risteel/image2.jpg', story_heading: 'A local team built on practical skill and honest work.', story_paragraph_1: 'R & I Steel Roofing is a provider of steel roofing and fabrication solutions in Malawi. Our team works on steel roof trusses, iron sheet roofing, custom steel windows, electrical installations and plumbing.', story_paragraph_2: 'From the first site measure through to handover, we aim to communicate clearly, specify materials up front and deliver careful workmanship.' })) {
+    await pool.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS ${column} text NOT NULL DEFAULT '${value.replaceAll("'", "''")}'`);
+  }
   await pool.query("INSERT INTO site_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING");
   const seeds = [
     ['services', ['Steel Truss Installation','Iron Sheet Installation','Steel Window Fabrication','Electrical Installation','Plumbing Services'], ['Engineered structures for durable roof frames.','Careful fitting for a clean, weather-ready finish.','Custom steel frames made to your project.','Electrical installation for homes and businesses.','Plumbing installation and repair.'], ['Engineered steel trusses for strong, long-lasting roof structures on homes and commercial buildings.','Precision iron sheet roofing that stands up to Malawi’s rains and sun, fitted for a clean, tight finish.','Custom-fabricated steel window frames built to your dimensions, security needs and design.','Electrical wiring and fittings for residential and commercial properties.','Reliable plumbing installation and repair, from new builds to existing systems.'], ['service1.png','service2.png','service3.png','service4.png','service5.png']],
@@ -80,20 +83,32 @@ async function initialize() {
   const teamCount = await pool.query('SELECT count(*)::int AS n FROM team_members');
   if (!teamCount.rows[0].n) {
     await pool.query(
-      'INSERT INTO team_members (name,role,bio,image_url,sort_order) VALUES ($1,$2,$3,$4,$5),($6,$7,$8,$9,$10)',
+      'INSERT INTO team_members (name,role,bio,image_url,sort_order) VALUES ($1,$2,$3,$4,$5),($6,$7,$8,$9,$10),($11,$12,$13,$14,$15)',
       [
-        'R & I Steel Team',
-        'Roofing & fabrication specialists',
-        'A practical local team focused on careful workmanship from site measure to handover.',
-        'assets/risteel/image2.jpg',
+        'Leadership Team',
+        'Managing Director',
+        'Guides the company’s work and helps keep every project focused on quality, clear communication and dependable service.',
+        '',
         0,
-        'Project team',
-        'Site installation and support',
-        'Our team works together to deliver dependable results for homes and businesses across Malawi.',
-        'assets/risteel/image4.jpg',
+        'Site Operations',
+        'Head Foreman',
+        'Coordinates site teams, checks workmanship and helps each installation move safely and smoothly from preparation to handover.',
+        '',
         1,
+        'Customer Support',
+        'Customer Relations & Digital Marketing',
+        'Supports clients with enquiries and project updates, and shares the team’s work with homes and businesses across Malawi.',
+        '',
+        2,
       ],
     );
+  }
+  const legacyTeam = await pool.query("SELECT count(*)::int AS n FROM team_members WHERE (name='R & I Steel Team' AND role='Roofing & fabrication specialists') OR (name='Project team' AND role='Site installation and support')");
+  const totalTeam = await pool.query('SELECT count(*)::int AS n FROM team_members');
+  if (legacyTeam.rows[0].n === 2 && totalTeam.rows[0].n === 2) {
+    await pool.query("UPDATE team_members SET name='Leadership Team',role='Managing Director',bio='Guides the company’s work and helps keep every project focused on quality, clear communication and dependable service.',image_url='',sort_order=0 WHERE name='R & I Steel Team' AND role='Roofing & fabrication specialists'");
+    await pool.query("UPDATE team_members SET name='Site Operations',role='Head Foreman',bio='Coordinates site teams, checks workmanship and helps each installation move safely and smoothly from preparation to handover.',image_url='',sort_order=1 WHERE name='Project team' AND role='Site installation and support'");
+    await pool.query("INSERT INTO team_members(name,role,bio,image_url,sort_order) VALUES('Customer Support','Customer Relations & Digital Marketing','Supports clients with enquiries and project updates, and shares the team’s work with homes and businesses across Malawi.','',2)");
   }
 }
 
@@ -123,7 +138,7 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.get('/api/site', async (_req, res, next) => {
   try {
     const [settings, ...data] = await Promise.all([
-      pool.query('SELECT hero_video_url,hero_image_url FROM site_settings WHERE id=1'),
+      pool.query('SELECT * FROM site_settings WHERE id=1'),
       pool.query('SELECT id,title,summary,description,image_url FROM services WHERE active=true ORDER BY sort_order,id'),
       pool.query('SELECT id,title,category,description,image_url FROM projects WHERE active=true ORDER BY sort_order,id'),
       pool.query('SELECT id,title,image_url,alt_text FROM gallery_items WHERE active=true ORDER BY sort_order,id'),
@@ -160,10 +175,14 @@ app.get('/api/admin/settings', async (_req, res, next) => { try { res.json((awai
 app.put('/api/admin/settings', async (req, res, next) => {
   try {
     const videoUrl = String(req.body.hero_video_url || '').trim();
-    const imageUrl = String(req.body.hero_image_url || '').trim();
+    const imageFields = ['hero_image_url','page_hero_about','page_hero_services','page_hero_projects','page_hero_gallery','page_hero_blog','page_hero_contact','about_story_image','home_who_we_are_image'];
+    const textFields = ['story_heading','story_paragraph_1','story_paragraph_2'];
+    const data = Object.fromEntries([...imageFields,...textFields].map(field => [field, String(req.body[field] ?? '').trim()]));
     if (videoUrl && !/^https:\/\//i.test(videoUrl) && !/^assets\//.test(videoUrl)) return res.status(400).json({ error: 'Use an https:// URL or a local assets/ path for the hero video.' });
-    if (imageUrl && !/^https?:\/\//i.test(imageUrl) && !/^\/uploads\//.test(imageUrl) && !/^assets\//.test(imageUrl)) return res.status(400).json({ error: 'Use an image URL, an /uploads/ path or a local assets/ path for the hero image.' });
-    const { rows } = await pool.query('UPDATE site_settings SET hero_video_url=$1,hero_image_url=$2,updated_at=now() WHERE id=1 RETURNING *', [videoUrl, imageUrl]);
+    for (const field of imageFields) if (data[field] && !/^https?:\/\//i.test(data[field]) && !/^\/uploads\//.test(data[field]) && !/^assets\//.test(data[field])) return res.status(400).json({ error: `Use an image URL, an /uploads/ path or a local assets/ path for ${field.replaceAll('_',' ')}.` });
+    const columns = ['hero_video_url', ...imageFields, ...textFields];
+    const values = [videoUrl, ...imageFields.map(field=>data[field]), ...textFields.map(field=>data[field])];
+    const { rows } = await pool.query(`UPDATE site_settings SET ${columns.map((field,index)=>`${field}=$${index+1}`).join(',')},updated_at=now() WHERE id=1 RETURNING *`, values);
     res.json(rows[0]);
   } catch (e) { next(e); }
 });

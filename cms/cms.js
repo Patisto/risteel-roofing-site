@@ -101,20 +101,18 @@ async function renderTab(){
 }
 async function renderSettings(){
   const settings=await request(`${api}/admin/settings`);
-  $('#panel').innerHTML=`<div class="panel-head"><div><h2>Hero settings</h2><p>Choose the image and optional video shown at the top of your homepage.</p></div></div><form class="editor settings-editor" id="settings-form" novalidate>
-    <div class="image-field"><label>Hero image</label><div class="image-preview" id="hero-image-preview">${settings.hero_image_url?`<img src="${escapeHtml(imageSrc(settings.hero_image_url))}" alt="Current hero preview">`:'Choose an image to preview it here'}</div><label class="upload-control"><span>Choose a hero image</span><input name="hero_image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><p class="helper">This image is the fallback background and remains visible while the hero video loads.</p></div>
-    <label>Hero video URL<input name="hero_video_url" type="url" value="${escapeHtml(settings.hero_video_url||'')}" placeholder="https://example.com/hero.mp4"></label>
-    <p class="helper">Use an https:// video URL or leave it blank to show only the hero image.</p>
-    <div class="actions"><button class="save-button" type="submit">Save hero settings</button></div><p class="notice" id="settings-notice" role="status" aria-live="polite"></p>
+  const images=[['hero_image_url','Homepage hero image','Fallback image shown while the homepage video loads.'],['home_who_we_are_image','Homepage “Who we are” image'],['page_hero_about','About page hero image'],['page_hero_services','Services page hero image'],['page_hero_projects','Projects page hero image'],['page_hero_gallery','Gallery page hero image'],['page_hero_blog','Blog page hero image'],['page_hero_contact','Contact page hero image'],['about_story_image','About page story image']];
+  const imageFields=images.map(([key,label,help])=>`<div class="image-field"><label>${label}</label><div class="image-preview" id="preview-${key}">${settings[key]?`<img src="${escapeHtml(imageSrc(settings[key]))}" alt="${label} preview">`:'Choose an image to preview it here'}</div><label class="upload-control"><span>Choose or replace image</span><input name="${key}" data-image-setting="${key}" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label>${help?`<p class="helper">${help}</p>`:''}</div>`).join('');
+  $('#panel').innerHTML=`<div class="panel-head"><div><h2>Page images &amp; About story</h2><p>Manage hero photos for each page and the story content on the About page.</p></div></div><form class="editor settings-editor" id="settings-form" novalidate>
+    ${imageFields}
+    <label>Homepage hero video URL<input name="hero_video_url" type="url" value="${escapeHtml(settings.hero_video_url||'')}" placeholder="https://example.com/hero.mp4"></label><p class="helper">Use an https:// video URL or leave it blank to show only the homepage hero image.</p>
+    <label>Our story heading<input name="story_heading" value="${escapeHtml(settings.story_heading||'')}"></label>
+    <label>Our story paragraph one<textarea name="story_paragraph_1">${escapeHtml(settings.story_paragraph_1||'')}</textarea></label>
+    <label>Our story paragraph two<textarea name="story_paragraph_2">${escapeHtml(settings.story_paragraph_2||'')}</textarea></label>
+    <div class="actions"><button class="save-button" type="submit">Save page settings</button></div><p class="notice" id="settings-notice" role="status" aria-live="polite"></p>
   </form>`;
   const form=$('#settings-form');
-  const fileInput=form.elements.hero_image;
-  fileInput.addEventListener('change',()=>{
-    const file=fileInput.files[0];
-    if(!file)return;
-    const preview=$('#hero-image-preview');
-    preview.innerHTML=`<img src="${URL.createObjectURL(file)}" alt="Selected hero preview">`;
-  });
+  form.querySelectorAll('[data-image-setting]').forEach(fileInput=>fileInput.addEventListener('change',()=>{const file=fileInput.files[0];if(file) $(`#preview-${fileInput.dataset.imageSetting}`).innerHTML=`<img src="${URL.createObjectURL(file)}" alt="Selected image preview">`}));
   form.onsubmit=event=>saveSettings(event,settings);
 }
 async function saveSettings(event,originalSettings){
@@ -125,20 +123,14 @@ async function saveSettings(event,originalSettings){
   const notice=$('#settings-notice');
   button.disabled=true;
   try{
-    let imageUrl=originalSettings.hero_image_url||'';
-    const file=form.elements.hero_image.files[0];
-    if(file){
-      button.innerHTML=spinner('Uploading image…');
-      const body=new FormData();
-      body.append('image',file);
-      imageUrl=(await request(`${api}/admin/upload`,{method:'POST',body})).url;
-    }
+    const payload={hero_video_url:form.elements.hero_video_url.value.trim(),story_heading:form.elements.story_heading.value.trim(),story_paragraph_1:form.elements.story_paragraph_1.value.trim(),story_paragraph_2:form.elements.story_paragraph_2.value.trim()};
+    for(const input of form.querySelectorAll('[data-image-setting]')){let imageUrl=originalSettings[input.dataset.imageSetting]||'';const file=input.files[0];if(file){button.innerHTML=spinner('Uploading images…');const body=new FormData();body.append('image',file);imageUrl=(await request(`${api}/admin/upload`,{method:'POST',body})).url}payload[input.dataset.imageSetting]=imageUrl}
     button.innerHTML=spinner('Saving settings…');
-    await request(`${api}/admin/settings`,{method:'PUT',body:JSON.stringify({hero_image_url:imageUrl,hero_video_url:form.elements.hero_video_url.value.trim()})});
-    notice.textContent='Hero settings saved successfully.';
+    await request(`${api}/admin/settings`,{method:'PUT',body:JSON.stringify(payload)});
+    notice.textContent='Page settings saved successfully.';
     notice.className='notice success';
   }catch(error){notice.textContent=error.message;notice.className='notice error'}
-  finally{button.disabled=false;button.textContent='Save hero settings'}
+  finally{button.disabled=false;button.textContent='Save page settings'}
 }
 async function renderCollection(key,{selectedId=null,notice=''}={}){
   records=await request(`${api}/admin/${key}`);
