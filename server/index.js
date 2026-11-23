@@ -160,7 +160,7 @@ app.get('/share/blog/:id', async (req, res, next) => {
     const post = rows[0];
     if (!post) return res.status(404).type('text').send('Blog post not found.');
     const siteUrl = 'https://risteelroofing.com';
-    const articleUrl = `${siteUrl}/blog.html?post=${encodeURIComponent(post.id)}`;
+    const articleUrl = `${siteUrl}/blog-post.html?id=${encodeURIComponent(post.id)}`;
     const apiOrigin = publicBaseUrl || `${req.protocol}://${req.get('host')}`;
     const imageUrl = /^https?:\/\//i.test(post.image_url) ? post.image_url
       : post.image_url.startsWith('/uploads/') ? `${apiOrigin}${post.image_url}`
