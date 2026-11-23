@@ -8,7 +8,7 @@ let selected=null;
 
 const defs={
   services:{title:'Services',image:true,fields:[['title','Service name','text'],['summary','Short summary','textarea'],['description','Full details','textarea'],['sort_order','Display order','number'],['active','Visible on website','checkbox']]},
-  projects:{title:'Projects',image:true,fields:[['title','Project title','text'],['category','Category','text'],['description','Description','textarea'],['sort_order','Display order','number'],['active','Visible on website','checkbox']]},
+  projects:{title:'Projects',image:true,fields:[['title','Project title','text'],['category','Category','text'],['description','Description','textarea'],['image_url_2','Extra project image 2','hidden'],['image_url_3','Extra project image 3','hidden'],['sort_order','Display order','number'],['active','Visible on website','checkbox']]},
   gallery:{title:'Gallery',image:true,fields:[['title','Image title','text'],['alt_text','Image description','text'],['sort_order','Display order','number'],['active','Visible on website','checkbox']]},
   blog:{title:'Blog',image:true,fields:[['title','Post title','text'],['summary','Short summary','textarea'],['content','Article content','textarea'],['sort_order','Display order','number'],['active','Publish on website','checkbox']]},
   team:{title:'Team',image:true,fields:[['name','Name','text'],['role','Role','text'],['bio','Bio','textarea'],['sort_order','Display order','number'],['active','Show on website','checkbox']]},
@@ -153,16 +153,17 @@ async function renderCollection(key,{selectedId=null,notice=''}={}){
 function renderForm(key,data={},notice=''){
   const form=$('#record-form');
   const def=defs[key];
-  const fields=def.fields.map(([name,label,type])=>{
+  const fields=def.fields.filter(([, ,type])=>type!=='hidden').map(([name,label,type])=>{
     const value=data[name]??(name==='active'?true:'');
     if(type==='checkbox')return `<label class="check-label"><input name="${name}" type="checkbox" ${value?'checked':''}>${label}</label>`;
     if(type==='textarea')return `<label>${label}<textarea name="${name}" ${name==='quote'||name==='title'||name==='bio'?'required':''}>${escapeHtml(value)}</textarea></label>`;
     return `<label>${label}<input name="${name}" type="${type}" value="${escapeHtml(value)}" ${name==='title'||name==='name'?'required':''}></label>`;
   }).join('');
   const currentImage=data.image_url||'';
-  const imageField=def.image?`<div class="image-field"><label>Website image</label><div class="image-preview" id="image-preview">${currentImage?`<img src="${escapeHtml(imageSrc(currentImage))}" alt="Current image preview">`:'Choose an image to preview it here'}</div><label class="upload-control"><span>${currentImage?'Choose a replacement image':'Choose an image'}</span><input name="upload" type="file" accept="image/jpeg,image/png,image/webp,image/gif" ${currentImage?'':'required'}></label><p class="helper">Select a JPG, PNG, WEBP or GIF image (maximum 15 MB). It will be resized and saved to the website.</p></div>`:'';
+  const imageField=key==='projects'?`<div class="project-image-fields">${[1,2,3].map((number)=>{const field=number===1?'image_url':`image_url_${number}`;const value=data[field]||'';return `<div class="image-field"><label>Project photo ${number}${number===1?' (required)':' (optional)'}</label><div class="image-preview" id="project-image-preview-${number}">${value?`<img src="${escapeHtml(imageSrc(value))}" alt="Project photo ${number} preview">`:'Add a project photo'}</div><label class="upload-control"><span>${value?'Choose replacement':'Choose photo'}</span><input name="project_upload_${number}" data-project-image="${field}" type="file" accept="image/jpeg,image/png,image/webp,image/gif" ${number===1&&!value?'required':''}></label></div>`}).join('')}<p class="helper">Project photos are also shown in the website gallery automatically.</p></div>`:def.image?`<div class="image-field"><label>Website image</label><div class="image-preview" id="image-preview">${currentImage?`<img src="${escapeHtml(imageSrc(currentImage))}" alt="Current image preview">`:'Choose an image to preview it here'}</div><label class="upload-control"><span>${currentImage?'Choose a replacement image':'Choose an image'}</span><input name="upload" type="file" accept="image/jpeg,image/png,image/webp,image/gif" ${currentImage?'':'required'}></label><p class="helper">Select a JPG, PNG, WEBP or GIF image (maximum 15 MB). It will be resized and saved to the website.</p></div>`:'';
   form.innerHTML=`${notice?`<p class="notice success" role="status">${escapeHtml(notice)}</p>`:''}${fields}${imageField}<div class="actions"><button class="save-button" type="submit">Save changes</button><button class="secondary-button" type="button" id="clear-form">${selected?'Cancel changes':'Clear form'}</button>${selected?'<button class="delete-button" type="button" id="delete-record">Delete</button>':''}</div><p class="notice" id="form-notice" role="status" aria-live="polite"></p>`;
   const fileInput=form.elements.upload;
+  form.querySelectorAll('[data-project-image]').forEach(input=>input.addEventListener('change',()=>{const file=input.files[0];if(file) $(`#project-image-preview-${input.dataset.projectImage==='image_url'?1:input.dataset.projectImage.slice(-1)}`).innerHTML=`<img src="${URL.createObjectURL(file)}" alt="Selected project photo">`}));
   if(fileInput)fileInput.addEventListener('change',()=>{
     const file=fileInput.files[0];
     if(!file)return;
@@ -196,11 +197,13 @@ async function saveRecord(event,key,originalData){
     button.innerHTML=spinner('Saving changes…');
     const payload={};
     for(const [name,,type] of defs[key].fields){
-      if(type==='checkbox')payload[name]=form.elements[name].checked;
+      if(type==='hidden')payload[name]=originalData[name]||'';
+      else if(type==='checkbox')payload[name]=form.elements[name].checked;
       else if(type==='number')payload[name]=Number(form.elements[name].value||0);
       else payload[name]=form.elements[name].value;
     }
     if(defs[key].image)payload.image_url=imageUrl;
+    if(key==='projects')for(const input of form.querySelectorAll('[data-project-image]')){let value=originalData[input.dataset.projectImage]||'';const selectedFile=input.files[0];if(selectedFile){button.innerHTML=spinner('Uploading project photos…');const body=new FormData();body.append('image',selectedFile);value=(await request(`${api}/admin/upload`,{method:'POST',body})).url}payload[input.dataset.projectImage]=value}
     const url=selected?`${api}/admin/${key}/${selected.id}`:`${api}/admin/${key}`;
     const saved=await request(url,{method:selected?'PUT':'POST',body:JSON.stringify(payload)});
     await renderCollection(key,{selectedId:saved?.id||selected?.id,notice:'Saved successfully. Your website content has been updated.'});

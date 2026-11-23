@@ -221,3 +221,14 @@
   .detail-services .detail-service:nth-child(odd) .detail-service-media{grid-column:1;grid-row:1}
   .detail-services .detail-service:nth-child(odd) .detail-service-copy{grid-column:2;grid-row:1}
 }
+.project-grid article{display:flex;flex-wrap:wrap;gap:0}
+.project-grid article>img{width:100%;cursor:zoom-in}
+.project-grid article>img:nth-of-type(n+2){width:50%;height:130px}
+.gallery-grid img{cursor:zoom-in}
+.photo-preview{position:relative;width:min(94vw,1100px);max-width:none;max-height:92vh;padding:12px;border:0;border-radius:10px;background:#111}
+.photo-preview::backdrop{background:#091724d9}
+.photo-preview>img{width:100%;height:min(82vh,850px);object-fit:contain}
+.photo-preview-close{position:absolute;right:18px;top:18px;z-index:2;width:42px;height:42px;border:0;border-radius:50%;background:#fff;color:#152635;font-size:27px;cursor:pointer}
+.project-image-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.project-image-fields .image-field{min-width:0}
+.project-image-fields .image-preview{min-height:100px}
+@media(max-width:680px){.project-image-fields{grid-template-columns:1fr}}

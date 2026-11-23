@@ -20,7 +20,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 }, fileFilter: (_req, file, cb) => cb(null, /^image\/(jpeg|png|webp|gif)$/.test(file.mimetype)) });
 const collections = {
   services: { table: 'services', fields: ['title','summary','description','image_url','sort_order','active'] },
-  projects: { table: 'projects', fields: ['title','category','description','image_url','sort_order','active'] },
+  projects: { table: 'projects', fields: ['title','category','description','image_url','image_url_2','image_url_3','sort_order','active'] },
   gallery: { table: 'gallery_items', fields: ['title','image_url','alt_text','sort_order','active'] },
   testimonials: { table: 'testimonials', fields: ['quote','author','location','sort_order','active'] },
   blog: { table: 'blog_posts', fields: ['title','summary','content','image_url','sort_order','active'] },
@@ -41,6 +41,8 @@ async function initialize() {
     CREATE TABLE IF NOT EXISTS messages (id bigserial PRIMARY KEY, name text NOT NULL, email text NOT NULL, phone text NOT NULL DEFAULT '', service text NOT NULL DEFAULT '', message text NOT NULL, read boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now());
     CREATE TABLE IF NOT EXISTS blog_comments (id bigserial PRIMARY KEY, post_id bigint NOT NULL REFERENCES blog_posts(id) ON DELETE CASCADE, name text NOT NULL, comment text NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
   `);
+  await pool.query("ALTER TABLE projects ADD COLUMN IF NOT EXISTS image_url_2 text NOT NULL DEFAULT ''");
+  await pool.query("ALTER TABLE projects ADD COLUMN IF NOT EXISTS image_url_3 text NOT NULL DEFAULT ''");
   await pool.query("ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS hero_image_url text NOT NULL DEFAULT 'assets/risteel/Rooftop Renovation Hero Banner.png'");
   for (const [column, value] of Object.entries({ page_hero_about: 'assets/risteel/image4.jpg', page_hero_services: 'assets/risteel/image1.jpg', page_hero_projects: 'assets/risteel/image2.jpg', page_hero_gallery: 'assets/risteel/image4.jpg', page_hero_blog: 'assets/risteel/Rooftop Renovation Hero Banner.png', page_hero_contact: 'assets/risteel/image6.jpg', about_story_image: 'assets/risteel/image2.jpg', home_who_we_are_image: 'assets/risteel/image2.jpg', story_heading: 'A local team built on practical skill and honest work.', story_paragraph_1: 'R & I Steel Roofing is a provider of steel roofing and fabrication solutions in Malawi. Our team works on steel roof trusses, iron sheet roofing, custom steel windows, electrical installations and plumbing.', story_paragraph_2: 'From the first site measure through to handover, we aim to communicate clearly, specify materials up front and deliver careful workmanship.' })) {
     await pool.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS ${column} text NOT NULL DEFAULT '${value.replaceAll("'", "''")}'`);
@@ -141,13 +143,14 @@ app.get('/api/site', async (_req, res, next) => {
     const [settings, ...data] = await Promise.all([
       pool.query('SELECT * FROM site_settings WHERE id=1'),
       pool.query('SELECT id,title,summary,description,image_url FROM services WHERE active=true ORDER BY sort_order,id'),
-      pool.query('SELECT id,title,category,description,image_url FROM projects WHERE active=true ORDER BY sort_order,id'),
+      pool.query('SELECT id,title,category,description,image_url,image_url_2,image_url_3 FROM projects WHERE active=true ORDER BY sort_order,id'),
       pool.query('SELECT id,title,image_url,alt_text FROM gallery_items WHERE active=true ORDER BY sort_order,id'),
       pool.query('SELECT id,quote,author,location FROM testimonials WHERE active=true ORDER BY sort_order,id'),
       pool.query('SELECT id,title,summary,content,image_url,created_at FROM blog_posts WHERE active=true ORDER BY sort_order,id,created_at DESC'),
       pool.query('SELECT id,name,role,bio,image_url FROM team_members WHERE active=true ORDER BY sort_order,id'),
     ]);
-    res.json({ settings: settings.rows[0] || {}, services: data[0].rows, projects: data[1].rows, gallery: data[2].rows, testimonials: data[3].rows, blog: data[4].rows, team: data[5].rows });
+    const projectGallery=data[1].rows.flatMap(project=>[project.image_url,project.image_url_2,project.image_url_3].filter(Boolean).map((image_url,index)=>({id:`project-${project.id}-${index+1}`,title:project.title,image_url,alt_text:project.title,source:'project'})));
+    res.json({ settings: settings.rows[0] || {}, services: data[0].rows, projects: data[1].rows, gallery: [...data[2].rows,...projectGallery], testimonials: data[3].rows, blog: data[4].rows, team: data[5].rows });
   } catch (e) { next(e); }
 });
 app.get('/share/blog/:id', async (req, res, next) => {
