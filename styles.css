@@ -232,3 +232,5 @@
 .project-image-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.project-image-fields .image-field{min-width:0}
 .project-image-fields .image-preview{min-height:100px}
 @media(max-width:680px){.project-image-fields{grid-template-columns:1fr}}
+.enquiry-form .h-captcha{margin-top:10px;max-width:100%;overflow:hidden}
+@media(max-width:390px){.enquiry-form .h-captcha{transform:scale(.9);transform-origin:left top;margin-bottom:-8px}}
