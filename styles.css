@@ -234,3 +234,6 @@
 @media(max-width:680px){.project-image-fields{grid-template-columns:1fr}}
 .enquiry-form .h-captcha{margin-top:10px;max-width:100%;overflow:hidden}
 @media(max-width:390px){.enquiry-form .h-captcha{transform:scale(.9);transform-origin:left top;margin-bottom:-8px}}
+.enquiry-form .form-note{display:block;margin:4px 0 0;padding:10px 12px;border-radius:5px;background:#f1f5f7;color:#52616b;font-size:12px;line-height:1.5}
+.enquiry-form .form-note.success{background:#eaf7ef;color:#17653a;border:1px solid #b9e1c7}
+.enquiry-form .form-note.error{background:#fff0ee;color:#9d2c20;border:1px solid #efc0b9}
