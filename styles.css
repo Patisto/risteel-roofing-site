@@ -237,3 +237,10 @@
 .enquiry-form .form-note{display:block;margin:4px 0 0;padding:10px 12px;border-radius:5px;background:#f1f5f7;color:#52616b;font-size:12px;line-height:1.5}
 .enquiry-form .form-note.success{background:#eaf7ef;color:#17653a;border:1px solid #b9e1c7}
 .enquiry-form .form-note.error{background:#fff0ee;color:#9d2c20;border:1px solid #efc0b9}
+.blog-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),350px));justify-content:start}
+.blog-like-button{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;color:#52616b;font:700 12px Manrope,Arial,sans-serif;cursor:pointer}
+.blog-like-button small{color:#77838d;font-size:11px}
+.blog-like-button:hover,.blog-like-button.is-liked{border-color:#e9a4a0;background:#fff5f4;color:#bb3e38}
+.blog-like-button.is-liked{font-weight:800}
+.blog-card-actions{flex-wrap:wrap}
+@media(max-width:680px){.blog-grid{grid-template-columns:minmax(0,1fr);justify-content:stretch}}
